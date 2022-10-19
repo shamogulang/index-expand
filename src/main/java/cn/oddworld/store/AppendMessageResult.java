@@ -7,17 +7,19 @@ public class AppendMessageResult {
     private AppendMessageStatus status;
     // Write Bytes
     private int wroteBytes;
+    private int wrotePos;
     // Message storage timestamp
     private long storeTimestamp;
 
     public AppendMessageResult(AppendMessageStatus status) {
-        this(status,  0, System.currentTimeMillis());
+        this(status,  0, 0,System.currentTimeMillis());
     }
 
-    public AppendMessageResult(AppendMessageStatus status, int wroteBytes,
+    public AppendMessageResult(AppendMessageStatus status, int wroteBytes, int wrotePos,
         long storeTimestamp) {
         this.status = status;
         this.wroteBytes = wroteBytes;
+        this.wrotePos = wrotePos;
         this.storeTimestamp = storeTimestamp;
     }
 
@@ -43,5 +45,13 @@ public class AppendMessageResult {
 
     public void setStoreTimestamp(long storeTimestamp) {
         this.storeTimestamp = storeTimestamp;
+    }
+
+    public int getWrotePos() {
+        return wrotePos;
+    }
+
+    public void setWrotePos(int wrotePos) {
+        this.wrotePos = wrotePos;
     }
 }

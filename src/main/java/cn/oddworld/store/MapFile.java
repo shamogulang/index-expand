@@ -62,6 +62,12 @@ public class MapFile {
         return wrotePosition.get();
     }
 
+    /**
+     * read fix position to fix+size data
+     * @param pos
+     * @param size
+     * @return
+     */
     public MapFileElemResult selectMappedBuffer(int pos, int size) {
         int readPosition = getReadPosition();
         if ((pos + size) <= readPosition) {
@@ -77,6 +83,11 @@ public class MapFile {
         return null;
     }
 
+    /**
+     * read the position pos to the end data
+     * @param pos
+     * @return
+     */
     public MapFileElemResult selectMappedBuffer(int pos) {
         int readPosition = getReadPosition();
         if (pos < readPosition && pos >= 0) {
@@ -93,58 +104,6 @@ public class MapFile {
     public int getReadPosition() {
         return this.wrotePosition.get();
     }
-
-    public AppendMessageResult appendMessage(MapFile mapFile, Message message){
-
-        int currentPosition = mapFile.wrotePosition.get();
-        int blankSize = mapFile.fileSize - currentPosition;
-        if(blankSize > 0){
-            ByteBuffer buffer = mapFile.getBufferSlice();
-            buffer.position(currentPosition);
-
-            final String business = message.getBusiness();
-            final byte[] businessBytes = business.getBytes();
-            int businessBytesLent = businessBytes.length;
-
-            final byte[] body = message.getBody();
-            int bodyLent = body.length;
-
-            final Map<String, String> properties = message.getProperties();
-            final String properties2String = CommonUtils.messageProperties2String(properties);
-            final byte[] properties2StringBytes = properties2String.getBytes();
-            int prosBytesLent = properties2StringBytes.length;
-
-            int msgLent = businessBytesLent + bodyLent + prosBytesLent;
-            if(blankSize < msgLent){
-                // it is not enough to set the msg, just ignore remaining space
-                mapFile.wrotePosition.addAndGet(blankSize);
-                log.warn("appendMessage error, msg = {}", message);
-                return new AppendMessageResult(AppendMessageStatus.END_OF_FILE,  blankSize, System.currentTimeMillis());
-            }
-
-            // 1、setting business name info
-            buffer.putInt(businessBytesLent);
-            buffer.put(businessBytes);
-
-            // 2、setting actual content
-            buffer.putInt(bodyLent);
-            buffer.put(body);
-
-            // 3、setting extra pros
-            buffer.putInt(prosBytesLent);
-            buffer.put(properties2StringBytes);
-            try {
-                this.fileChannel.position(currentPosition);
-                this.fileChannel.write(buffer);
-            }catch (Throwable throwable){
-                log.error("Error occurred when append message to mappedFile.", throwable);
-            }
-            mapFile.wrotePosition.addAndGet(msgLent);
-            return new AppendMessageResult(AppendMessageStatus.PUT_OK, msgLent, System.currentTimeMillis());
-        }
-        return new AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);
-    }
-
 
 
     public boolean appendMessage(final byte[] data) {

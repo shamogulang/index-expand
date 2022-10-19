@@ -23,46 +23,83 @@ public class MapFileQueue {
      */
     private final int mappedFileSize;
 
-    private ReentrantLock lock;
 
     private final CopyOnWriteArrayList<MapFile> mapFiles = new CopyOnWriteArrayList<>();
 
     public MapFileQueue(String storePath, int mappedFileSize) {
         this.storePath = storePath;
         this.mappedFileSize = mappedFileSize;
-        lock = new ReentrantLock();
     }
 
     public MapFile getLastMapFile(final long startOffset) {
         return getLastMapFile(startOffset, true);
     }
 
-    public boolean appendMessage(Message message){
-        MapFile lastMapFile = getLastMapFile(0);
-        lock.lock();
-        try {
-            final AppendMessageResult messageResult = lastMapFile.appendMessage(lastMapFile, message);
-            switch (messageResult.getStatus()){
-                case PUT_OK:
-                    break;
-                case END_OF_FILE:
-                    lastMapFile = getLastMapFile(0);
-                    final AppendMessageResult result = lastMapFile.appendMessage(lastMapFile, message);
-                    if(!result.getStatus().equals(AppendMessageStatus.PUT_OK)){
-                        log.error("appendMessage error, msg = {}", message);
-                        return false;
-                    }
-                default:
-                    log.warn("appendMessage un know status error, msg = {}", message);
-                    return false;
+    public MapFile getFirstMapFile() {
+        MapFile mappedFileFirst = null;
+
+        if (!this.mapFiles.isEmpty()) {
+            try {
+                mappedFileFirst = this.mapFiles.get(0);
+            } catch (IndexOutOfBoundsException e) {
+                //ignore
+            } catch (Exception e) {
+                log.error("getFirstMappedFile has exception.", e);
             }
-        }catch (Exception e){
-            log.error("appendMessage error, msg = {}", message, e);
-        }finally {
-            lock.unlock();
         }
-        return  true;
+
+        return mappedFileFirst;
     }
+
+    public MapFile findMappedFileByOffset(final long offset) {
+        return findMappedFileByOffset(offset, false);
+    }
+
+    public MapFile findMappedFileByOffset(final long offset, final boolean returnFirstOnNotFound) {
+        try {
+            MapFile firstMappedFile = this.getFirstMapFile();
+            MapFile lastMappedFile = this.getLastMapFile();
+            if (firstMappedFile != null && lastMappedFile != null) {
+                if (offset < firstMappedFile.getFileFromOffset() || offset >= lastMappedFile.getFileFromOffset() + this.mappedFileSize) {
+                    log.warn("Offset not matched. Request offset: {}, firstOffset: {}, lastOffset: {}, mappedFileSize: {}, mappedFiles count: {}",
+                            offset,
+                            firstMappedFile.getFileFromOffset(),
+                            lastMappedFile.getFileFromOffset() + this.mappedFileSize,
+                            this.mappedFileSize,
+                            this.mapFiles.size());
+                } else {
+                    int index = (int) ((offset / this.mappedFileSize) - (firstMappedFile.getFileFromOffset() / this.mappedFileSize));
+                    MapFile targetFile = null;
+                    try {
+                        targetFile = this.mapFiles.get(index);
+                    } catch (Exception ignored) {
+                    }
+
+                    if (targetFile != null && offset >= targetFile.getFileFromOffset()
+                            && offset < targetFile.getFileFromOffset() + this.mappedFileSize) {
+                        return targetFile;
+                    }
+
+                    for (MapFile tmpMappedFile : this.mapFiles) {
+                        if (offset >= tmpMappedFile.getFileFromOffset()
+                                && offset < tmpMappedFile.getFileFromOffset() + this.mappedFileSize) {
+                            return tmpMappedFile;
+                        }
+                    }
+                }
+
+                if (returnFirstOnNotFound) {
+                    return firstMappedFile;
+                }
+            }
+        } catch (Exception e) {
+            log.error("findMappedFileByOffset Exception", e);
+        }
+
+        return null;
+    }
+
+
 
     public MapFile getLastMapFile(final long startOffset, boolean needCreate) {
         long createOffset = -1;

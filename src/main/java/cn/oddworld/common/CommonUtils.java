@@ -2,7 +2,9 @@ package cn.oddworld.common;
 
 import cn.oddworld.store.Message;
 
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.nio.charset.Charset;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +19,28 @@ public class CommonUtils {
         nf.setMaximumFractionDigits(0);
         nf.setGroupingUsed(false);
         return nf.format(offset);
+    }
+
+    public static Message buffer2Message(ByteBuffer buffer){
+
+        Message message = new Message();
+        final int businessLent = buffer.getInt();
+        byte[] businessBody = new byte[businessLent];
+        buffer.get(businessBody);
+        message.setBusiness(new String(businessBody, Charset.forName(Constants.UTF8)));
+
+        final int bodyLent = buffer.getInt();
+        byte[] bodyBody = new byte[bodyLent];
+        buffer.get(bodyBody);
+        message.setBody(bodyBody);
+
+        final int prosLent = buffer.getInt();
+        byte[] prosBody = new byte[prosLent];
+        buffer.get(prosBody);
+        final String prosStrings = new String(prosBody, Charset.forName(Constants.UTF8));
+        final Map<String, String> properties = CommonUtils.string2messageProperties(prosStrings);
+        message.setProperties(properties);
+        return message;
     }
 
     public static void message2Buffer(MappedByteBuffer buffer, Message message){
@@ -36,7 +60,7 @@ public class CommonUtils {
 
         // 3、setting extra pros
         final Map<String, String> properties = message.getProperties();
-        final String properties2String = CommonUtils.messageProperties2String(properties);
+        final String properties2String = CommonUtils.properties2String(properties);
         final byte[] properties2StringBytes = properties2String.getBytes();
         int prosBytesLent = properties2StringBytes.length;
         buffer.putInt(prosBytesLent);
@@ -58,7 +82,7 @@ public class CommonUtils {
         return map;
     }
 
-    public static String messageProperties2String(Map<String, String> properties) {
+    public static String properties2String(Map<String, String> properties) {
         StringBuilder sb = new StringBuilder();
         if (properties != null) {
             for (final Map.Entry<String, String> entry : properties.entrySet()) {
