@@ -1,7 +1,5 @@
 package cn.oddworld.store;
 
-import cn.oddworld.common.AppendMessageStatus;
-import cn.oddworld.common.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,9 +10,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class MapFile {
 
@@ -29,6 +25,23 @@ public class MapFile {
 
     public MapFile(final String fileName, final int fileSize) throws IOException {
         init(fileName, fileSize);
+    }
+
+    public static void main(String[] args) throws Exception{
+        final MapFile mapFile = new MapFile("E:\\index\\idxfile\\00000000000000000000", 1024);
+        final byte[] bytes = "jeffchan".getBytes();
+        final byte[] bytes1 = "jeffchan1".getBytes();
+        System.out.println(bytes.length);
+        System.out.println(bytes1.length);
+        mapFile.appendMessage(bytes);
+        mapFile.appendMessage(bytes1);
+
+        final MapFileElemResult result = mapFile.selectMappedBuffer(8,9);
+
+        final ByteBuffer byteBuffer = result.getByteBuffer();
+        byte[] bytes2 = new byte[9];
+        byteBuffer.get(bytes2);
+        System.out.println(new String(bytes2));
     }
 
     private void init(final String fileName, final int fileSize) throws IOException {
@@ -75,7 +88,7 @@ public class MapFile {
             byteBuffer.position(pos);
             ByteBuffer byteBufferNew = byteBuffer.slice();
             byteBufferNew.limit(size);
-            return new MapFileElemResult(this.fileFromOffset + pos, byteBufferNew, size, this);
+            return new MapFileElemResult(this.fileFromOffset + pos, byteBuffer, size, this);
         } else {
             log.warn("selectMappedBuffer request pos invalid, request pos: " + pos + ", size: " + size
                     + ", fileFromOffset: " + this.fileFromOffset);

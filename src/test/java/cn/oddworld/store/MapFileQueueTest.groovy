@@ -15,26 +15,39 @@ class MapFileQueueTest  {
         commitMapFile = new CommitMapFile("idxfile", "E:\\index", 1024, consumeMapFile );
     }
 
-
     @Test
-    void testAppendMessage() {
-        Message message = new Message();
-        message.setBody("jeffchan".getBytes())
-        message.setBusiness("idx-file");
-        Map<String, String> pros = new HashMap<String, String>();
-        pros.put("jeffchan1", "jeffValue1");
-        pros.put("jeffchan2", "jeffValue2")
-        message.setProperties(pros)
-        for(int i = 0; i < 1; i++){
-            boolean  flag = commitMapFile.appendMessage(message);
-            assert flag == true
+    void testConsumeAppendMessage() {
+        for(int i = 0; i < 2; i++){
+            consumeMapFile.appendMessage(i,2*(i+1))
         }
-        MapFileElemResult rsp = consumeMapFile.getIndexBuffer(0);
+        MapFileElemResult rsp = consumeMapFile.getIndexBuffer(1);
         ByteBuffer buffer = rsp.getByteBuffer();
         long commitSize = buffer.getLong();
         int size = buffer.getInt();
 
         Message messagex = commitMapFile.getMessageContent(commitSize, size);
         assert  messagex.getBusiness().endsWith(message.getBusiness())
+    }
+
+    @Test
+    void testAppendMessage() {
+        for(int i = 0; i < 15; i++){
+            Message message = new Message();
+            message.setBody("jeffchan".getBytes())
+            message.setBusiness("idx-file");
+            Map<String, String> pros = new HashMap<String, String>();
+            message.setProperties(pros)
+            pros.put("jeffchan1"+i, "jeffValue1"+i);
+            pros.put("jeffchan2"+i, "jeffValue2"+i)
+            boolean  flag = commitMapFile.appendMessage(message);
+            assert flag == true
+        }
+        MapFileElemResult rsp = consumeMapFile.getIndexBuffer(13);
+        ByteBuffer buffer = rsp.getByteBuffer();
+        long commitOffset = buffer.getLong();
+        int size = buffer.getInt();
+
+        Message messagex = commitMapFile.getMessageContent(commitOffset, size);
+        println messagex.getProperties()
     }
 }

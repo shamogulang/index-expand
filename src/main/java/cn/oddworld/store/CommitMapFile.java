@@ -66,7 +66,7 @@ public class CommitMapFile {
             final AppendMessageResult messageResult = appendMessage(lastMapFile, message);
             switch (messageResult.getStatus()){
                 case PUT_OK:
-                    consumeMapFile.appendMessage(messageResult.getWrotePos(), messageResult.getWroteBytes());
+                    consumeMapFile.appendMessage(messageResult.getWrotePos()+lastMapFile.getFileFromOffset(), messageResult.getWroteBytes());
                     break;
                 case END_OF_FILE:
                     lastMapFile = mapFileQueue.getLastMapFile(0);
@@ -74,6 +74,8 @@ public class CommitMapFile {
                     if(!result.getStatus().equals(AppendMessageStatus.PUT_OK)){
                         log.error("appendMessage error, msg = {}", message);
                         return false;
+                    }else {
+                        consumeMapFile.appendMessage(result.getWrotePos()+lastMapFile.getFileFromOffset(), result.getWroteBytes());
                     }
                     break;
                 default:
@@ -93,9 +95,6 @@ public class CommitMapFile {
         int currentPosition = mapFile.wrotePosition.get();
         int blankSize = mapFile.fileSize - currentPosition;
         if(blankSize > 0){
-            ByteBuffer buffer = mapFile.getBufferSlice();
-            buffer.position(currentPosition);
-
             final String business = message.getBusiness();
             final byte[] businessBytes = business.getBytes();
             int businessBytesLent = businessBytes.length;
@@ -116,6 +115,7 @@ public class CommitMapFile {
                 return new AppendMessageResult(AppendMessageStatus.END_OF_FILE,  blankSize, currentPosition, System.currentTimeMillis());
             }
 
+            ByteBuffer buffer = ByteBuffer.allocate(msgLent);
             // 1、setting business name info
             buffer.putInt(businessBytesLent);
             buffer.put(businessBytes);

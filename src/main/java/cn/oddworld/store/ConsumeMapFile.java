@@ -34,7 +34,7 @@ public class ConsumeMapFile {
         // 去掉了最小逻辑位置
         MapFile mappedFile = this.mapFileQueue.findMappedFileByOffset(offset);
         if (mappedFile != null) {
-            MapFileElemResult result = mappedFile.selectMappedBuffer((int) (offset % mappedFileSize));
+            MapFileElemResult result = mappedFile.selectMappedBuffer((int) (offset % mappedFileSize), UNIT_SIZE);
             return result;
         }
         return null;
@@ -73,8 +73,6 @@ public class ConsumeMapFile {
         int currentPosition = mapFile.wrotePosition.get();
         int blankSize = mapFile.fileSize - currentPosition;
         if(blankSize > 0){
-            ByteBuffer buffer = mapFile.getBufferSlice();
-            buffer.position(currentPosition);
 
             if(blankSize < UNIT_SIZE){
                 // it is not enough to set the msg, just ignore remaining space
@@ -82,14 +80,16 @@ public class ConsumeMapFile {
                 log.warn("consume file space not enough, fill the space, then get next file to handle msg, commitOffset = {}, msgSize = {}", commitOffset, msgSize);
                 return new AppendMessageResult(AppendMessageStatus.END_OF_FILE,  blankSize, currentPosition, System.currentTimeMillis());
             }
-
+            ByteBuffer buffer = ByteBuffer.allocate(UNIT_SIZE);
             // 1、setting commitOffset and message size
             buffer.putLong(commitOffset);
             buffer.putInt(msgSize);
             try {
                 buffer.flip();
-                mapFile.fileChannel.position(currentPosition);
-                mapFile.fileChannel.write(buffer);
+                while (buffer.hasRemaining()){
+                    mapFile.fileChannel.position(currentPosition);
+                    mapFile.fileChannel.write(buffer);
+                }
             }catch (Throwable throwable){
                 log.error("Error occurred when append message to mappedFile.", throwable);
             }
