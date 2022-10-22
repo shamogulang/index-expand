@@ -1,37 +1,34 @@
 package cn.oddworld.store;
 
 import cn.oddworld.common.AppendMessageStatus;
-import cn.oddworld.common.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ConsumeMapFile {
 
     private Logger log = LoggerFactory.getLogger(CommitMapFile.class);
-    private final static int UNIT_SIZE = 12;
+    public final static int UNIT_SIZE = 12;
     private final MapFileQueue mapFileQueue;
-    private final String business;
-    private final String storePath;
     private final int mappedFileSize;
     private ReentrantLock lock;
 
 
-    public ConsumeMapFile(String business, String storePath, int mappedFileSize) {
+    public ConsumeMapFile(String storePath, int mappedFileSize) {
         this.mapFileQueue = new MapFileQueue(storePath, mappedFileSize);
-        this.business = business;
-        this.storePath = storePath;
         this.mappedFileSize = mappedFileSize;
         lock = new ReentrantLock();
+    }
+
+    public boolean load() {
+        return  this.mapFileQueue.load();
     }
 
     public MapFileElemResult getIndexBuffer(final long startIndex) {
         int mappedFileSize = this.mappedFileSize;
         long offset = startIndex * UNIT_SIZE;
-        // 去掉了最小逻辑位置
         MapFile mappedFile = this.mapFileQueue.findMappedFileByOffset(offset);
         if (mappedFile != null) {
             MapFileElemResult result = mappedFile.selectMappedBuffer((int) (offset % mappedFileSize), UNIT_SIZE);
@@ -125,5 +122,13 @@ public class ConsumeMapFile {
             }
         }
         return lastOffset;
+    }
+
+    public MapFileQueue getMapFileQueue() {
+        return mapFileQueue;
+    }
+
+    public int getMappedFileSize() {
+        return mappedFileSize;
     }
 }

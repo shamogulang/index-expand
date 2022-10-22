@@ -2,6 +2,10 @@ package cn.oddworld.common;
 
 import cn.oddworld.store.Message;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.charset.Charset;
@@ -20,6 +24,80 @@ public class CommonUtils {
         nf.setGroupingUsed(false);
         return nf.format(offset);
     }
+
+    public static void string2File(final String str, final String fileName) throws IOException {
+
+        // write content to the tmp file
+        String tmpFile = fileName + ".tmp";
+        string2FileNotSafe(str, tmpFile);
+
+        String bakFile = fileName + ".bak";
+        // read content from filename
+        String prevContent = file2String(fileName);
+        if (prevContent != null) {
+            // write content to bak file, store last file content
+            string2FileNotSafe(prevContent, bakFile);
+        }
+
+        // delete filename if exist
+        File file = new File(fileName);
+        file.delete();
+
+        // create tmp file
+        file = new File(tmpFile);
+        // rename tmp file to file
+        file.renameTo(new File(fileName));
+    }
+
+    public static String file2String(final String fileName) throws IOException {
+        File file = new File(fileName);
+        return file2String(file);
+    }
+
+    public static String file2String(final File file) throws IOException {
+        if (file.exists()) {
+            byte[] data = new byte[(int) file.length()];
+            boolean result;
+
+            FileInputStream inputStream = null;
+            try {
+                inputStream = new FileInputStream(file);
+                int len = inputStream.read(data);
+                result = len == data.length;
+            } finally {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+            }
+
+            if (result) {
+                return new String(data);
+            }
+        }
+        return null;
+    }
+
+
+    public static void string2FileNotSafe(final String str, final String fileName) throws IOException {
+        File file = new File(fileName);
+        File fileParent = file.getParentFile();
+        if (fileParent != null) {
+            fileParent.mkdirs();
+        }
+        FileWriter fileWriter = null;
+
+        try {
+            fileWriter = new FileWriter(file);
+            fileWriter.write(str);
+        } catch (IOException e) {
+            throw e;
+        } finally {
+            if (fileWriter != null) {
+                fileWriter.close();
+            }
+        }
+    }
+
 
     public static Message buffer2Message(ByteBuffer buffer){
 

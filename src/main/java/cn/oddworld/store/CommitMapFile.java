@@ -14,14 +14,12 @@ public class CommitMapFile {
     private Logger log = LoggerFactory.getLogger(CommitMapFile.class);
     private final MapFileQueue mapFileQueue;
     private final ConsumeMapFile consumeMapFile;
-    private final String business;
     private final String storePath;
     private final int mappedFileSize;
     private ReentrantLock lock;
 
-    public CommitMapFile(String business, String storePath, int mappedFileSize, ConsumeMapFile consumeMapFile) {
+    public CommitMapFile(String storePath, int mappedFileSize, ConsumeMapFile consumeMapFile) {
         this.mapFileQueue = new MapFileQueue(storePath, mappedFileSize);
-        this.business = business;
         this.storePath = storePath;
         this.mappedFileSize = mappedFileSize;
         this.consumeMapFile = consumeMapFile;
@@ -39,7 +37,6 @@ public class CommitMapFile {
             MapFileElemResult result = mappedFile.selectMappedBuffer(pos);
             return result;
         }
-
         return null;
     }
 
@@ -88,6 +85,10 @@ public class CommitMapFile {
             lock.unlock();
         }
         return  true;
+    }
+
+    public boolean load() {
+        return  this.mapFileQueue.load();
     }
 
     public AppendMessageResult appendMessage(MapFile mapFile, Message message){
@@ -143,10 +144,6 @@ public class CommitMapFile {
 
     public MapFileQueue getMapFileQueue() {
         return mapFileQueue;
-    }
-
-    public String getBusiness() {
-        return business;
     }
 
     public String getStorePath() {

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -49,6 +50,35 @@ public class MapFileQueue {
         }
 
         return mappedFileFirst;
+    }
+
+    public boolean load() {
+        File dir = new File(this.storePath);
+        File[] files = dir.listFiles();
+        if (files != null) {
+            // ascending order
+            Arrays.sort(files);
+            for (File file : files) {
+
+                if (file.length() != this.mappedFileSize) {
+                    log.warn(file + "\t" + file.length()
+                            + " length not matched message store config value, please check it manually");
+                    return false;
+                }
+
+                try {
+                    MapFile mappedFile = new MapFile(file.getPath(), mappedFileSize);
+                    mappedFile.wrotePosition.set(this.mappedFileSize);
+                    this.mapFiles.add(mappedFile);
+                    log.info("load " + file.getPath() + " OK");
+                } catch (IOException e) {
+                    log.error("load file " + file + " error", e);
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public MapFile findMappedFileByOffset(final long offset) {

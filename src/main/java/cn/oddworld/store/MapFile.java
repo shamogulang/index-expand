@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MapFile {
 
     private static Logger log = LoggerFactory.getLogger(MapFile.class);
-    protected final AtomicInteger wrotePosition = new AtomicInteger(0);
+    protected  AtomicInteger wrotePosition = new AtomicInteger(0);
     protected int fileSize;
     protected FileChannel fileChannel;
     private String fileName;
@@ -25,23 +25,6 @@ public class MapFile {
 
     public MapFile(final String fileName, final int fileSize) throws IOException {
         init(fileName, fileSize);
-    }
-
-    public static void main(String[] args) throws Exception{
-        final MapFile mapFile = new MapFile("E:\\index\\idxfile\\00000000000000000000", 1024);
-        final byte[] bytes = "jeffchan".getBytes();
-        final byte[] bytes1 = "jeffchan1".getBytes();
-        System.out.println(bytes.length);
-        System.out.println(bytes1.length);
-        mapFile.appendMessage(bytes);
-        mapFile.appendMessage(bytes1);
-
-        final MapFileElemResult result = mapFile.selectMappedBuffer(8,9);
-
-        final ByteBuffer byteBuffer = result.getByteBuffer();
-        byte[] bytes2 = new byte[9];
-        byteBuffer.get(bytes2);
-        System.out.println(new String(bytes2));
     }
 
     private void init(final String fileName, final int fileSize) throws IOException {
@@ -72,8 +55,14 @@ public class MapFile {
 
 
     public int getWrotePosition() {
-        return wrotePosition.get();
+        return this.wrotePosition.get();
     }
+
+    public void setWrotePosition(int wrotePosition) {
+
+        this.wrotePosition.set(wrotePosition);
+    }
+
 
     /**
      * read fix position to fix+size data
